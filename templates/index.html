@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Performance monitor</title>
+    <style>
+      * {
+        font-family: 'Share Tech Mono', monospace;
+      }
+      body {
+        background-color: var(--bg-body);
+      }
+      :root {
+        --bg-body: #fff;
+        --box-bg: #f0f0f0;
+        --progress-bg: #f3f3f3;
+        --color-text: black;
+        --bar-border: #111111;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-body: #000;
+          --box-bg: #111111;
+          --progress-bg: #141414;
+          --color-text: white;
+          --bar-border: #f0f0f0;
+        }
+      }
+      h2 {
+        color: var(--color-text);
+      }
+      .container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .box {
+        flex: 1;
+        min-width: 400px;
+        background-color: var(--box-bg);
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      .progress-container {
+        flex: 1;
+        background-color: var(--progress-bg);
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0;
+        border: 1px solid var(--bar-border);
+      }
+      .progress-bar {
+        width: 0%;
+        height: 30px;
+        line-height: 30px;
+        transition: width 0.4s ease-in-out;
+      }
+      .bar-text {
+        width: 70px;
+        flex-shrink: 0;
+        text-align: right;
+      }
+      .line {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 20px 0;
+      }
+      .info-text, .bar-text {
+        color: var(--color-text);
+      }
+      #ram-bar {
+        background-color: #4caf50;
+      }
+      #cpu-bar {
+        background-color: #ca2020;
+      }
+      #swap-bar {
+        background-color: #20b0ca;
+      }
+      #disk-bar {
+        background-color: #ad10e6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="box">
+        <h2>RAM</h2>
+        <div class="line">
+          <div class="progress-container">
+            <div id="ram-bar" class="progress-bar"></div>
+          </div>
+          <span class="bar-text" id="ram-text">0 %</span>
+        </div>
+        <span id="ram-total-text" class="info-text">RAM size: 0</span><br>
+        <span id="ram-available-text" class="info-text">RAM available: 0</span>
+      </div>
+      <div class="box">
+        <h2>CPU</h2>
+        <div class="line">
+          <div class="progress-container">
+            <div id="cpu-bar" class="progress-bar"></div>
+          </div>
+          <span id="cpu-text" class="bar-text">0 %</span>
+        </div>
+        <span id="cpu-cores-text" class="info-text">Cores: 0</span><br>
+        <span id="cpu-frequency-text" class="info-text">Frequency: 0 MHz</span>
+      </div>
+      <div class="box">
+        <h2>SWAP</h2>
+        <div class="line">
+          <div class="progress-container">
+            <div id="swap-bar" class="progress-bar"></div>
+          </div>
+          <span id="swap-text" class="bar-text">0 %</span>
+        </div>
+        <span id="swap-total-text" class="info-text">Total: 0</span><br>
+        <span id="swap-used-text" class="info-text">Used: 0</span><br>
+        <span id="swap-free-text" class="info-text">Free: 0</span>
+      </div>
+      <div class="box">
+        <h2>Disk</h2>
+        <div class="line">
+          <div class="progress-container">
+            <div id="disk-bar" class="progress-bar"></div>
+          </div>
+          <span id="disk-text" class="bar-text">0 %</span>
+        </div>
+        <span id="disk-total-text" class="info-text">Total: 0</span><br>
+        <span id="disk-used-text" class="info-text">Used: 0</span><br>
+        <span id="disk-free-text" class="info-text">Free: 0</span>
+      </div>
+      <div class="box">
+        <h2>Network</h2>
+        <span id="bytes-sent-text" class="info-text">Bytes sent: 0</span><br>
+        <span id="bytes-received-text" class="info-text">Bytes received: 0</span><br>
+        <span id="packets-sent-text" class="info-text">Packets sent: 0</span><br>
+        <span id="packets-received-text" class="info-text">Packets received: 0</span>
+      </div>
+      <div class="box">
+        <h2>Info</h2>
+        <span id="boot-time-text" class="info-text">Boot time: 0</span><br>
+        <span id="temperature-text" class="info-text">Temperature: 0</span>
+      </div>
+    </div>
+
+    <script>
+      function defineSize(bytes, decimalPlaces = 2) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(decimalPlaces)) + ' ' + units[i];
+      }
+
+      function updateProgress() {
+        fetch("/get_data")
+          .then((response) => response.json())
+          .then((data) => {
+            document.getElementById("ram-total-text").textContent = "RAM size: " + defineSize(data.ram.total);
+            document.getElementById("ram-available-text").textContent = "RAM available: " + defineSize(data.ram.available);
+
+            document.getElementById("ram-bar").style.width = data.ram.percent + "%";
+            document.getElementById("ram-text").textContent = data.ram.percent + " %";
+
+            document.getElementById("cpu-cores-text").textContent = "Cores: " + data.cpu_count;
+            document.getElementById("cpu-frequency-text").textContent = "Frequency: " + data.cpu_frequency + " MHz";
+
+            document.getElementById("cpu-bar").style.width = data.cpu_percent + "%";
+            document.getElementById("cpu-text").textContent = data.cpu_percent + " %";
+
+            document.getElementById("swap-total-text").textContent = "Total size: " + defineSize(data.swap.total);
+            document.getElementById("swap-used-text").textContent = "Used: " + defineSize(data.swap.used);
+            document.getElementById("swap-free-text").textContent = "Free: " + defineSize(data.swap.free);
+
+            document.getElementById("swap-bar").style.width = data.swap.percent + "%";
+            document.getElementById("swap-text").textContent = data.swap.percent + " %";
+
+            document.getElementById("disk-total-text").textContent = "Total size: " + defineSize(data.disk.total);
+            document.getElementById("disk-used-text").textContent = "Used: " + defineSize(data.disk.used);
+            document.getElementById("disk-free-text").textContent = "Free: " + defineSize(data.disk.free);
+
+            document.getElementById("disk-bar").style.width = data.disk.percent + "%";
+            document.getElementById("disk-text").textContent = data.disk.percent + " %";
+
+            document.getElementById("bytes-sent-text").textContent = "Bytes sent: " + defineSize(data.network.bytes_sent);
+            document.getElementById("bytes-received-text").textContent = "Bytes received: " + defineSize(data.network.bytes_received);
+            document.getElementById("packets-sent-text").textContent = "Packets sent: " + data.network.packets_sent
+            document.getElementById("packets-received-text").textContent = "Packets received: " + data.network.packets_received;
+
+            document.getElementById("boot-time-text").textContent = "Boot time: " + data.boot_time;
+
+            if (data.temperature != null) {
+              document.getElementById("temperature-text").textContent = "Temperature: " + parseFloat(data.temperature).toFixed(2) + "°C";
+            }
+            else {
+              document.getElementById("temperature-text").textContent = "";
+            }
+            
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+
+      setInterval(updateProgress, 1000);
+    </script>
+  </body>
+</html>
